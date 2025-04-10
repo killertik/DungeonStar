@@ -1,0 +1,249 @@
+import random
+import time
+
+# Define COLORS for terminal text formatting
+COLORS = {
+    'red': '\033[31m',
+    'green': '\033[32m',
+    'blue': '\033[34m',
+    'yellow': '\033[33m',
+    'cyan': '\033[36m',
+    'reset': '\033[0m'
+}
+
+# Helper function: Print text slowly for better effect
+def slow_print(text, delay=0.05, color=None):
+    if color:
+        text = f"{COLORS[color]}{text}{COLORS['reset']}"
+    for char in text:
+        print(char, end='', flush=True)
+        time.sleep(delay)
+    print()
+
+# Helper function: Create visual breaks
+def visual_break(symbol='=', length=50):
+    print(symbol * length)
+
+# Helper function: Generate a graphical health bar
+def health_bar(current_hp, max_hp, bar_length=20):
+    ratio = max(0, current_hp / max_hp)
+    bar_fill = int(ratio * bar_length)
+    empty_fill = bar_length - bar_fill
+    color = COLORS['green'] if ratio > 0.5 else COLORS['yellow'] if ratio > 0.2 else COLORS['red']
+    return f"{color}[{'#' * bar_fill}{'-' * empty_fill}] {current_hp}/{max_hp}{COLORS['reset']}"
+
+# Adventurer class
+class Adventurer:
+    def __init__(self, name, hero_class):
+        self.name = name
+        self.hero_class = hero_class
+        self.hit_points = 50
+        self.max_hit_points = 50
+        self.strength = random.randint(5, 10)
+        self.dexterity = random.randint(5, 10)
+        self.constitution = random.randint(5, 10)
+        self.special_ability = None
+        self.gold = 0
+        self.bag = ["Basic Sword"]
+
+    def is_alive(self):
+        return self.hit_points > 0
+
+    def display_health(self):
+        print(health_bar(self.hit_points, self.max_hit_points))
+
+    def display_inventory(self):
+        slow_print(
+            f"{COLORS['yellow']}Inventory: {', '.join(self.bag) if self.bag else 'Empty'}{COLORS['reset']}",
+            delay=0.02
+        )
+
+
+# Monster class
+class Monster:
+    MONSTERS = [
+        {"name": "Goblin", "min_dmg": 2, "max_dmg": 5, "hit_points": 10},
+        {"name": "Dragon", "min_dmg": 10, "max_dmg": 20, "hit_points": 50},
+        {"name": "Skeleton", "min_dmg": 3, "max_dmg": 7, "hit_points": 15},
+        {"name": "Orc", "min_dmg": 5, "max_dmg": 10, "hit_points": 20},
+        {"name": "Spider", "min_dmg": 2, "max_dmg": 6, "hit_points": 12},
+    ]
+
+    MONSTER_ART = {
+        "Goblin": r"""
+             ,      ,
+            /(.-""-.)\
+        |\  \/      \/  /|
+        | \ / =.  .= \ / |
+        \( \   o\/o   / )/
+         \    \_/\_/    /
+          \    (_)    /
+           |  |'-.-'|  |
+           |  |  |  |  |
+           \_/ \_| |_/
+        """,
+        "Dragon": r"""
+                ______________
+               /            / |
+  ____________/            |  |
+ /                        _|  |
+|                        /     |
+|   Dragon              |      |
+|                       \______|
+|                        ____  |
+|_______________________|    |__|
+        """,
+        "Skeleton": r"""
+          .-.
+         (o.o)
+         |=|
+        __|__
+      //.=|=.\\
+     // .=|=. \\
+     \\ .=|=. //
+      \\(_=_)//
+       (:| |:)
+        || ||
+        () ()
+        || ||
+        || ||
+       ==' '==
+        """,
+        "Orc": r"""
+        .      .
+       / `.  .' \
+       \  \ /  /
+        \  |  /
+         \ | /
+         (o o)
+          \_/
+        """,
+        "Spider": r"""
+            (
+             )
+            (
+         /\  .-""" + r"""-.  /\
+        //\\/  ,,,  \//\\
+        |/  ,;;;;;,  \\|
+        //\\/  ,,,,  \//\\
+        (   |;;;;;;;|   )
+         \  ||;;;;;;;||  /
+          \_\\;'''':;//_/
+           /    spider   \
+        """
+    }
+
+    def __init__(self, name, min_dmg, max_dmg, hit_points):
+        self.name = name
+        self.min_dmg = min_dmg
+        self.max_dmg = max_dmg
+        self.hit_points = hit_points
+        self.max_hit_points = hit_points
+        self.ascii_art = Monster.MONSTER_ART.get(name, "No Art Found")
+
+    @staticmethod
+    def create_monster():
+        data = random.choice(Monster.MONSTERS)
+        return Monster(data["name"], data["min_dmg"], data["max_dmg"], data["hit_points"])
+
+    def display_health(self):
+        print(health_bar(self.hit_points, self.max_hit_points))
+
+
+# Room class: Represents rooms in the dungeon
+class Room:
+    def __init__(self, description, treasure=None, monster=None):
+        self.description = description
+        self.treasure = treasure
+        self.monster = monster
+
+    def enter(self, hero):
+        visual_break()
+        slow_print(self.description, delay=0.04)
+        if self.monster:
+            slow_print(f"{COLORS['red']}A wild {self.monster.name} appears!{COLORS['reset']}")
+            print(self.monster.ascii_art)
+            while hero.is_alive() and self.monster.hit_points > 0:
+                self.combat_menu(hero)
+                if not hero.is_alive():
+                    slow_print(f"{COLORS['red']}You were slain by the {self.monster.name}!{COLORS['reset']}")
+                    return False
+        if self.treasure:
+            slow_print(
+                f"{COLORS['cyan']}🎉 You found a treasure: {self.treasure}! 🎉{COLORS['reset']}",
+                delay=0.03
+            )
+            hero.bag.append(self.treasure)
+        return hero.is_alive()
+
+    def combat_menu(self, hero):
+        while True:
+            slow_print("\nChoose your action:", delay=0.03, color="yellow")
+            slow_print("1. Attack", delay=0.03)
+            slow_print("2. Change Weapon (if available)", delay=0.03)
+            slow_print("3. Flee", delay=0.03)
+            choice = input("Your choice: ").strip()
+            if choice == "1":
+                self.attack(hero)
+                break  # Leave menu
+            elif choice == "2":
+                slow_print("You fumble through your bag... but for now, this feature is placeholder!")
+                break
+            elif choice == "3":
+                if random.random() < 0.5:  # 50% chance to escape
+                    slow_print(f"{COLORS['cyan']}You successfully ran away!{COLORS['reset']}")
+                    self.monster.hit_points = 0  # Mark as defeated
+                    break
+                else:
+                    slow_print(f"{COLORS['red']}Failed to flee! The monster attacks!{COLORS['reset']}")
+                    self.monster_turn(hero)
+            else:
+                slow_print("Invalid choice. Try again.")
+
+    def attack(self, hero):
+        damage = random.randint(5, hero.strength)
+        slow_print(f"You hit the {self.monster.name} for {damage} damage!")
+        self.monster.hit_points -= damage
+        self.monster.display_health()
+        if self.monster.hit_points > 0:
+            self.monster_turn(hero)
+
+    def monster_turn(self, hero):
+        retaliation = random.randint(self.monster.min_dmg, self.monster.max_dmg)
+        slow_print(f"The {self.monster.name} strikes back for {retaliation} damage!")
+        hero.hit_points -= retaliation
+        hero.display_health()
+
+
+# Cave class
+class Cave:
+    def __init__(self):
+        self.rooms = []
+        for i in range(5):
+            description = f"Room {i + 1}: You hear faint echoes in the darkness..."
+            treasure = random.choice(["Gold Coins", "Magic Potion", None])
+            monster = Monster.create_monster() if random.random() < 0.7 else None
+            self.rooms.append(Room(description, treasure, monster))
+
+    def explore(self, hero):
+        slow_print("You enter the cave and begin your adventure...\n", delay=0.03)
+        for room in self.rooms:
+            if not room.enter(hero):
+                slow_print("Game over!", delay=0.05)
+                return
+        slow_print(f"{COLORS['green']}Congratulations! You've survived the dungeon!{COLORS['reset']}", delay=0.05)
+
+
+# Main function
+def main():
+    slow_print("Welcome to the Dungeon Crawler!", delay=0.06, color="cyan")
+    name = input("Enter your hero's name: ")
+    hero_class = input("Choose a class (Warrior, Mage, Thief): ")
+    hero = Adventurer(name, hero_class)
+    cave = Cave()
+    cave.explore(hero)
+
+
+# Start the game
+if __name__ == "__main__":
+    main()
