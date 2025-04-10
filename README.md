@@ -16,7 +16,7 @@ This project was developed as part of a Python 3 programming course on Coursera,
 
 **Current Status & Future Development:**
 
-While the game is playable, there are still areas for improvement and potential bugs lurking within the depths of the code. 
+While the game is playable, it is only a base for future developments. There are still areas for improvement and potential bugs lurking within the depths of the code. 
 Despite an initial attempt at debugging with the assistance of Large Language Models, further refinement and testing are required.
 
 **Contributions Welcome!**
